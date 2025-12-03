@@ -31,7 +31,7 @@ class 下兵(夜世界基础任务):
                 if 技能次数>=40:
                     raise RuntimeError(f"一直在放兵种技能,超过{技能次数}次")
 
-            self.上下文.置脚本状态("下兵完毕，等待战斗结束",3*60)
+            self.上下文.置脚本状态("兵种技能已放完，等待战斗结束",3*60)
             return True
 
         except RuntimeError as e:

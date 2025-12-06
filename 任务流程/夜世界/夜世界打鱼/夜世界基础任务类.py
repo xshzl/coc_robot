@@ -3,6 +3,7 @@ from typing import Tuple
 from 任务流程.基础任务框架 import 任务上下文
 from abc import ABC, abstractmethod
 
+from 模块.检测.YOLO检测器 import 线程安全YOLO检测器
 from 模块.检测.模板匹配器 import 模板匹配引擎
 from 模块.检测.OCR识别器 import 安全OCR引擎
 import cv2
@@ -15,6 +16,9 @@ class 夜世界基础任务(ABC):
         self.上下文 = 上下文
         self.模板识别 = 模板匹配引擎()
         self.ocr引擎 = 安全OCR引擎()
+        self.检测器 = 线程安全YOLO检测器()
+        self.数据库 = 上下文.数据库
+        self.机器人标志 = 上下文.机器人标志
 
     @abstractmethod
     def 执行(self) -> bool:
@@ -54,7 +58,7 @@ class 夜世界基础任务(ABC):
             屏幕图像 = self.上下文.op.获取屏幕图像cv(x1, y1, x2, y2)
             # 使用OCR引擎识别
             ocr结果, _ = self.ocr引擎(屏幕图像)
-            self.上下文.置脚本状态(f"ocr结果: {ocr结果}")
+            #self.上下文.置脚本状态(f"ocr结果: {ocr结果}")
             return ocr结果 if ocr结果 is not None else []
         except Exception as e:
             self.上下文.置脚本状态(f"OCR识别失败: {str(e)}")

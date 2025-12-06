@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Tuple, Any
 
 from 工具包.工具函数 import 生成贝塞尔轨迹
-from 数据库.任务数据库 import 任务数据库
+from 数据库.任务数据库 import 任务数据库, 机器人设置
 from 核心.op import op类
 
 from 核心.键盘操作 import 键盘控制器
@@ -28,6 +28,10 @@ class 任务上下文:
     键盘:键盘控制器
     鼠标:鼠标控制器
     置脚本状态:Callable
+    @property
+    def 设置(self) -> 机器人设置:
+        配置 = self.数据库.获取机器人设置(self.机器人标志)
+        return 配置
 
     # def 置脚本状态(self, 日志内容:str, 超时的时间:float=60):
     #     print(f"[机器人消息] {self.机器人标志} {time.strftime('%Y年%m月%d日 %H:%M:%S')}: {日志内容}")

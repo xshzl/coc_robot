@@ -97,28 +97,6 @@ class 任务数据库:
                     更新时间 REAL
                 )""")
 
-            # 任务参数表（存储任务的配置参数）
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS 任务参数 (
-                    机器人标志 TEXT NOT NULL,
-                    任务类名 TEXT NOT NULL,
-                    参数名 TEXT NOT NULL,
-                    参数值 TEXT NOT NULL,  -- JSON格式
-                    更新时间 REAL,
-                    PRIMARY KEY (机器人标志, 任务类名, 参数名)
-                )""")
-
-            # 任务状态表（存储任务运行时的状态）
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS 任务状态 (
-                    机器人标志 TEXT NOT NULL,
-                    任务类名 TEXT NOT NULL,
-                    状态键 TEXT NOT NULL,
-                    状态值 TEXT NOT NULL,  -- JSON格式
-                    更新时间 REAL,
-                    PRIMARY KEY (机器人标志, 任务类名, 状态键)
-                )""")
-
 
     # ==== 日志操作 ====
     def 记录日志(self, 机器人标志: str, 日志内容: str, 下次超时: float):
@@ -312,88 +290,6 @@ class 任务数据库:
             "数据": json.loads(row[2])
         } for row in records]
 
-    # ==== 任务参数操作 ====
-    def 保存任务参数(self, 机器人标志: str, 任务类名: str, 参数字典: Dict[str, Any]):
-        """保存任务的所有参数"""
-        with self._获取连接() as conn:
-            for 参数名, 参数值 in 参数字典.items():
-                conn.execute("""
-                    INSERT OR REPLACE INTO 任务参数
-                    (机器人标志, 任务类名, 参数名, 参数值, 更新时间)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (机器人标志, 任务类名, 参数名, json.dumps(参数值), time.time()))
-            conn.commit()
-
-    def 获取任务参数(self, 机器人标志: str, 任务类名: str) -> Dict[str, Any]:
-        """获取任务的所有参数"""
-        with self._获取连接() as conn:
-            结果列表 = conn.execute("""
-                SELECT 参数名, 参数值
-                FROM 任务参数
-                WHERE 机器人标志 = ? AND 任务类名 = ?
-            """, (机器人标志, 任务类名)).fetchall()
-
-        return {行[0]: json.loads(行[1]) for 行 in 结果列表} if 结果列表 else {}
-
-    def 删除任务参数(self, 机器人标志: str, 任务类名: str = None):
-        """删除任务参数（不指定任务类名则删除该机器人的所有任务参数）"""
-        with self._获取连接() as conn:
-            if 任务类名:
-                conn.execute("DELETE FROM 任务参数 WHERE 机器人标志 = ? AND 任务类名 = ?",
-                           (机器人标志, 任务类名))
-            else:
-                conn.execute("DELETE FROM 任务参数 WHERE 机器人标志 = ?", (机器人标志,))
-            conn.commit()
-
-    # ==== 任务状态操作 ====
-    def 保存任务状态(self, 机器人标志: str, 任务类名: str, 状态字典: Dict[str, Any]):
-        """保存任务的状态数据"""
-        with self._获取连接() as conn:
-            for 状态键, 状态值 in 状态字典.items():
-                conn.execute("""
-                    INSERT OR REPLACE INTO 任务状态
-                    (机器人标志, 任务类名, 状态键, 状态值, 更新时间)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (机器人标志, 任务类名, 状态键, json.dumps(状态值), time.time()))
-            conn.commit()
-
-    def 获取任务状态(self, 机器人标志: str, 任务类名: str) -> Dict[str, Any]:
-        """获取任务的状态数据"""
-        with self._获取连接() as conn:
-            结果列表 = conn.execute("""
-                SELECT 状态键, 状态值
-                FROM 任务状态
-                WHERE 机器人标志 = ? AND 任务类名 = ?
-            """, (机器人标志, 任务类名)).fetchall()
-
-        return {行[0]: json.loads(行[1]) for 行 in 结果列表} if 结果列表 else {}
-
-    def 删除任务状态(self, 机器人标志: str, 任务类名: str = None):
-        """删除任务状态（不指定任务类名则删除该机器人的所有任务状态）"""
-        with self._获取连接() as conn:
-            if 任务类名:
-                conn.execute("DELETE FROM 任务状态 WHERE 机器人标志 = ? AND 任务类名 = ?",
-                           (机器人标志, 任务类名))
-            else:
-                conn.execute("DELETE FROM 任务状态 WHERE 机器人标志 = ?", (机器人标志,))
-            conn.commit()
-
-    def 获取所有任务参数配置(self, 机器人标志: str) -> Dict[str, Dict[str, Any]]:
-        """获取该机器人所有任务的参数配置 {任务类名: {参数名: 参数值}}"""
-        with self._获取连接() as conn:
-            结果列表 = conn.execute("""
-                SELECT 任务类名, 参数名, 参数值
-                FROM 任务参数
-                WHERE 机器人标志 = ?
-            """, (机器人标志,)).fetchall()
-
-        配置字典 = {}
-        for 任务类名, 参数名, 参数值 in 结果列表:
-            if 任务类名 not in 配置字典:
-                配置字典[任务类名] = {}
-            配置字典[任务类名][参数名] = json.loads(参数值)
-
-        return 配置字典
 
 
 

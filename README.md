@@ -82,7 +82,7 @@
 
 ### ⚠️ 使用前必读
 
-- [📜 DISCLAIMER - 免责声明](DISCLAIMER.md) - **英文/中文双语版本**
+- [📜 DISCLAIMER - 免责声明](docs/DISCLAIMER.md) - **英文/中文双语版本**
 - [⚖️ 法律风险与责任分析](docs/法律风险与责任分析.md) - **详细风险说明**
 
 ### 新手入门

@@ -5,6 +5,7 @@ import numpy as np
 
 from 任务流程.基础任务框架 import 任务上下文, 基础任务
 from 任务流程.夜世界.夜世界打鱼.夜世界基础任务类 import 夜世界基础任务
+from 任务流程.建筑升级.升级普通建筑 import 提取建议升级建筑, 提取建议升级建筑名称
 
 
 class 资源不足错误(Exception):
@@ -17,28 +18,65 @@ class 资源不足错误(Exception):
     def __str__(self):
         return f"发生了：{self.错误信息}"
 
+from enum import Enum
+
+class 建筑查找模式(Enum):
+    指定建筑 = "指定建筑"
+    建议升级中的第一个可用建筑 = "建议升级"
 
 class 寻找建筑(夜世界基础任务):
     """自动检测并升级城墙"""
 
     默认颜色阈值 = {'色差H': 10, '色差S': 10, '色差V': 10, '最少像素数': 150}
 
-    def __init__(self, 上下文: '任务上下文', 建筑名称: str | list = "城墙"):
+    def __init__(self, 上下文: '任务上下文', 建筑名称: str | list | None  = None,查找模式: 建筑查找模式 = 建筑查找模式.指定建筑):
         super().__init__(上下文)
-        # 支持单个建筑名称或多个建筑名称
-        if isinstance(建筑名称, str):
-            self.建筑列表 = [建筑名称]
-        elif isinstance(建筑名称, list):
-            self.建筑列表 = 建筑名称
-        else:
-            raise TypeError("建筑名称必须是字符串或字符串列表")
+        self.查找模式 = 查找模式
         self.开始时间 = None
         self.当前建筑: str | None = None  # 新增实例变量，用于保存找到的建筑，然后升级建筑任务读取这个变量，用于根据不同的建筑类型执行升级操作
+
+
+        if 查找模式 == 建筑查找模式.指定建筑:
+            # 支持单个建筑名称或多个建筑名称
+            if isinstance(建筑名称, str):
+                self.建筑列表 = [建筑名称]
+            elif isinstance(建筑名称, list):
+                self.建筑列表 = 建筑名称
+            else:
+                raise TypeError("建筑名称必须是字符串或字符串列表")
+
+        elif 查找模式 == 建筑查找模式.建议升级中的第一个可用建筑:
+            if 建筑名称 is not None:
+                raise ValueError("建议升级模式下，不允许传入建筑名称")
+
+            self.建筑列表 = []  # 由 OCR 决定
+
+        else:
+            raise ValueError(f"未知的查找模式: {查找模式}")
+
+
     # ---------------------- 主入口 ----------------------
     def 执行(self) -> bool:
         """任务执行入口"""
         try:
-            return self.找建筑循环()
+
+            if self.查找模式 == 建筑查找模式.指定建筑:
+                return self.找建筑循环()
+            elif self.查找模式 == 建筑查找模式.建议升级中的第一个可用建筑:
+                self.上下文.置脚本状态(f"开始寻找建议升级中的建筑")
+
+                self.打开建筑页面(划到底部=False)
+                ocr结果 = self.执行OCR识别((219, 57, 595, 398))
+
+                self.建筑列表 = 提取建议升级建筑名称(ocr结果)
+                if self.建筑列表 is None:
+                    self.上下文.置脚本状态(f"警告，无法确定建议升级列表中的建筑,ocr结果为"+ocr结果.__str__())
+                    return False
+
+                self.上下文.置脚本状态(f"建议升级{', '.join(self.建筑列表)}")
+
+                return self.尝试选中指定建筑(提取建议升级建筑(ocr结果))
+
         except 资源不足错误 as e:
             self.上下文.置脚本状态(str(e))
             return False
@@ -46,9 +84,14 @@ class 寻找建筑(夜世界基础任务):
             self.异常处理(e)
             return False
 
+
+
+
+
+
     # ---------------------- 主流程循环 ----------------------
     def 找建筑循环(self) -> bool:
-        """寻找并尝试升级建筑的主循环"""
+        """寻找并尝试升级建筑的主循环,成功返回真,失败返回假"""
         self.上下文.置脚本状态(f"开始寻找建筑: {', '.join(self.建筑列表)}")
         self.打开建筑页面()
         self.开始时间 = time.time()
@@ -88,11 +131,12 @@ class 寻找建筑(夜世界基础任务):
         return False
 
     # ---------------------- 界面操作 ----------------------
-    def 打开建筑页面(self):
+    def 打开建筑页面(self,划到底部=True):
         """点击进入建筑界面并模拟滑动"""
         x = 353 if self.上下文.设置.是否刷主世界 else 450
         self.上下文.点击(x, 13, 延时=1000)
-        self.滑动到建筑栏底部()
+        if 划到底部:
+            self.滑动到建筑栏底部()
 
     def 关闭建筑页面(self):
         """关闭建筑界面"""

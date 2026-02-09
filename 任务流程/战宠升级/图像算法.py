@@ -1,5 +1,37 @@
 import cv2
+import numpy as np
 
+
+def 是否包含指定颜色_HSV(图像: np.ndarray, 目标RGB: tuple,
+                         色差H=10, 色差S=100, 色差V=100,
+                         最少像素数=1000, 是否可视化=False) -> bool:
+    "H (色相),S (饱和度),V (亮度)表示这三者的偏移的容忍程度"
+
+    # 将图像转换为 HSV
+    hsv图像 = cv2.cvtColor(图像, cv2.COLOR_BGR2HSV)
+
+    # RGB → HSV（先转 BGR 再转 HSV）
+    目标色_BGR = np.uint8([[list(reversed(目标RGB))]])  # RGB -> BGR
+    目标色_HSV = cv2.cvtColor(目标色_BGR, cv2.COLOR_BGR2HSV)[0][0]
+    h, s, v = map(int, 目标色_HSV)  # ⚠️ 转成 int 防止溢出
+
+    # 定义 HSV 范围上下限
+    下限 = np.array([max(0, h - 色差H), max(0, s - 色差S), max(0, v - 色差V)])
+    上限 = np.array([min(179, h + 色差H), min(255, s + 色差S), min(255, v + 色差V)])
+
+    # 掩码提取
+    掩码 = cv2.inRange(hsv图像, 下限, 上限)
+    匹配像素数 = cv2.countNonZero(掩码)
+
+    # print(f"目标HSV: {目标色_HSV}  匹配像素数: {匹配像素数}")
+
+    if 是否可视化:
+        cv2.imshow("原图", 图像)
+        cv2.imshow("匹配掩码", 掩码)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+    return 匹配像素数 >= 最少像素数
 
 def 从内部点获取黑框坐标(
     屏幕图像,
@@ -96,6 +128,7 @@ def 从内部点获取黑框坐标(
             return 左上角, 右下角
 
     return None
+
 
 
 if __name__ == "__main__":
